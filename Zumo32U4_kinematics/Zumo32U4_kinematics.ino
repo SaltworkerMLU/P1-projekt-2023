@@ -97,11 +97,11 @@ struct kinematics {
    *  \param v Linear velocity of Zumo whilst function is running 
    *  \param omega Angular velocity of Zumo whilst function is running 
    *  \param time Time function must run in milliseconds.
-   *  \param offset Take into account any kinds of offset in calculations. */
-  void unicycleModel(float v, float omega, int time, float offset=1.5) {
-    float v_l = offset*(10*v - omega * s/10) / r;
-    float v_r = offset*(10*v + omega * s/10) / r;
-    motors.setSpeeds(v_l, v_r);
+   *  \param angularOffset Take into account any kinds of offset in calculating anglular velocity. */
+  void unicycleModel(float v, float omega, int time, float angularOffset=1) {
+    float v_1 = v*s/10 + angularOffset*omega;
+    float v_2 = v*s/10 - angularOffset*omega;
+    motors.setSpeeds(v_1, v_2);
     long startTime = millis();
     long nowTime = startTime; // Set current time to start time before beginning loop
     while (nowTime < startTime + time) {
@@ -121,7 +121,7 @@ void setup() {
   delay(1000);
   kinematics.driveStraight(20, 1000);
   kinematics.driveRotation(90, 1000);
-  kinematics.unicycleModel(20, 90, 1000, 0.375);
+  kinematics.unicycleModel(20, 90, 1000, 0.75);
 }
 
 void loop() {
