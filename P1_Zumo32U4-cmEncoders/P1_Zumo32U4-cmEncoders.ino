@@ -7,7 +7,7 @@ void getDistance() { // Updates distance[2] and uses encoder "clicks" to calcula
   distance[0] = 8 * acos(0.0) * motorEncoders.getCountsLeft() / 900;
   distance[1] = 8 * acos(0.0) * motorEncoders.getCountsRight() / 900;
 }
-w
+
 void setup() {
   // put your setup code here, to run once:
 
