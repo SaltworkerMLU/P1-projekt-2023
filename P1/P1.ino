@@ -1,3 +1,5 @@
+#include <Wire.h>
+#include <Zumo32U4.h>
 
 float boundsX;
 float boundsY;
