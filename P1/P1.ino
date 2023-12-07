@@ -3,7 +3,7 @@
 
 Zumo32U4Motors motors;
 Zumo32U4LineSensors lineSensors;
-Zumo32U4OLED display;
+Zumo32U4LCD display;
 Zumo32U4Encoders encoders;
 Zumo32U4IMU imu;
 Zumo32U4Buzzer buzzer;
@@ -54,7 +54,7 @@ struct kinematics {
     excecutedTime = micros();
     currentPosition[0] += Offset * (v1 + v2) * cos(currentPosition[2] * PI / 180) * dt / (2 * 1000000);  //funktion (9)
     currentPosition[1] += Offset * (v1 + v2) * sin(currentPosition[2] * PI / 180) * dt / (2 * 1000000);
-    currentPosition[2] += Offset * 50 * (v1 - v2) * dt / (s / 10 * 1000000);
+    currentPosition[2] += Offset * 50 * (v2 - v1) * dt / (s / 10 * 1000000);
     if (currentPosition[2] < 0) {
       currentPosition[2] = currentPosition[2] + 360;
     }
@@ -68,7 +68,7 @@ struct kinematics {
     float b = y_d - currentPosition[1];
     float teta = (atan(b / a)) / PI * 180;
     while (currentPosition[2] < teta) {
-      motors.setSpeeds(100, -100);
+      motors.setSpeeds(-100, 100);
       forwardKinematics(encoderData.velocity[0], encoderData.velocity[1], 0.95);
       display.clear();
       display.print(teta);
@@ -77,13 +77,43 @@ struct kinematics {
     }
     motors.setSpeeds(0, 0);
   }
+
+  void driveStraight(float x_d, float y_d, float offset = 1) {
+    forwardKinematics(encoderData.velocity[0], encoderData.velocity[1], 0.95);
+
+    while (currentPosition[0] < x_d) {
+      motors.setSpeeds(100, 100);
+      forwardKinematics(encoderData.velocity[0], encoderData.velocity[1], 0.95);
+      display.clear();
+      display.print(x_d);
+      display.gotoXY(0, 1);
+      display.print(currentPosition[0]);
+    }
+    motors.setSpeeds(0, 0);
+  }
+
+
+  void findDesiredAngle(float angle_d) {
+    forwardKinematics(encoderData.velocity[0], encoderData.velocity[1], 0.95);
+    while (currentPosition[2] > angle_d) {
+      motors.setSpeeds(100, -100);
+      forwardKinematics(encoderData.velocity[0], encoderData.velocity[1], 0.95);
+      display.clear();
+      display.print(angle_d);
+      display.gotoXY(0, 1);
+      display.print(currentPosition[2]);
+    }
+    motors.setSpeeds(0, 0);
+  }
+
+
+
   void backwardKinematics(float x_d, float y_d, float angle_d) {
     forwardKinematics(encoderData.velocity[0], encoderData.velocity[1], 0.95);
     findTargetAngle(x_d, y_d);
-    //driveStraight();
-    //findDesiredAngle();
+    driveStraight(x_d, y_d);
+    findDesiredAngle(angle_d);
   }
-
 } kinematics;
 
 
@@ -129,8 +159,8 @@ void setup() {
 
 void loop() {
   kinematics.forwardKinematics(encoderData.velocity[0], encoderData.velocity[1], 0.95);
-  kinematics.findTargetAngle(2, 2);
-
+  Serial.println((String) "X:\t" + kinematics.currentPosition[0] + "cm\t\tY:\t" + kinematics.currentPosition[1] + "cm\t\tθ:\t" + kinematics.currentPosition[2] + "°");
+  kinematics.backwardKinematics(20, 20, 20);
 
   /*
   switch (state){
