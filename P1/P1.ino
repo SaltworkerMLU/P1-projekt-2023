@@ -3,7 +3,7 @@
 
 Zumo32U4Motors motors;
 Zumo32U4LineSensors lineSensors;
-Zumo32U4LCD display;
+Zumo32U4OLED display;
 Zumo32U4Encoders encoders;
 Zumo32U4IMU imu;
 Zumo32U4Buzzer buzzer;
@@ -14,6 +14,12 @@ float boundsY;
 int state;
 float lastPosition[3];
 
+void screen(float line1, float line2) {
+  display.clear();
+  display.print(line1);
+  display.gotoXY(0, 1);
+  display.print(line2);
+}
 
 struct encoderData {
   float distance[2];
@@ -47,6 +53,7 @@ struct kinematics {
   int r = 2;
   int s = 85;
   long excecutedTime = micros();
+  int backwardStage = 0;
 
   void forwardKinematics(float v1, float v2, float Offset) {
     encoderData.getVelocity();
@@ -62,57 +69,121 @@ struct kinematics {
       currentPosition[2] = currentPosition[2] - 360;
     }
   }
+
   void findTargetAngle(float x_d, float y_d) {
     forwardKinematics(encoderData.velocity[0], encoderData.velocity[1], 0.95);
-    float a = x_d - currentPosition[0];
-    float b = y_d - currentPosition[1];
-    float teta = (atan(b / a)) / PI * 180;
-    while (currentPosition[2] < teta) {
-      motors.setSpeeds(-100, 100);
-      forwardKinematics(encoderData.velocity[0], encoderData.velocity[1], 0.95);
-      display.clear();
-      display.print(teta);
-      display.gotoXY(0, 1);
-      display.print(currentPosition[2]);
+    float teta = (atan2(y_d, x_d)) / PI * 180;
+    if (teta < 0) {
+      teta += 360;
     }
-    motors.setSpeeds(0, 0);
+
+    float turnAngle = teta - currentPosition[2];
+    if (turnAngle < 0) {
+      turnAngle += 360;
+    }
+
+    if (turnAngle <= 180) {
+      while (turnAngle > 1) {
+        motors.setSpeeds(-100, 100);
+        forwardKinematics(encoderData.velocity[0], encoderData.velocity[1], 0.95);
+        turnAngle = teta - currentPosition[2];
+        if (turnAngle < 0) {
+          turnAngle += 360;
+        }
+        screen(turnAngle, currentPosition[2]);
+      }
+      motors.setSpeeds(0, 0);
+    }
+
+    else if (turnAngle > 180) {
+      while (turnAngle > 1) {
+        motors.setSpeeds(100, -100);
+        forwardKinematics(encoderData.velocity[0], encoderData.velocity[1], 0.95);
+        turnAngle = teta - currentPosition[2];
+        if (turnAngle < 0) {
+          turnAngle += 360;
+        }
+        screen(turnAngle, currentPosition[2]);
+      }
+      motors.setSpeeds(0, 0);
+    }
+    screen(turnAngle, currentPosition[2]);
   }
 
   void driveStraight(float x_d, float y_d, float offset = 1) {
     forwardKinematics(encoderData.velocity[0], encoderData.velocity[1], 0.95);
 
-    while (currentPosition[0] < x_d) {
-      motors.setSpeeds(100, 100);
-      forwardKinematics(encoderData.velocity[0], encoderData.velocity[1], 0.95);
-      display.clear();
-      display.print(x_d);
-      display.gotoXY(0, 1);
-      display.print(currentPosition[0]);
+    if (currentPosition[0] < x_d) {
+      while (currentPosition[0] < x_d) {
+        motors.setSpeeds(100, 100);
+        forwardKinematics(encoderData.velocity[0], encoderData.velocity[1], 0.95);
+        screen(x_d, currentPosition[0]);
+      }
+      motors.setSpeeds(0, 0);
     }
-    motors.setSpeeds(0, 0);
+
+    else if (currentPosition[0] > x_d) {
+      while (currentPosition[0] > x_d) {
+        motors.setSpeeds(100, 100);
+        forwardKinematics(encoderData.velocity[0], encoderData.velocity[1], 0.95);
+        screen(x_d, currentPosition[0]);
+      }
+      motors.setSpeeds(0, 0);
+    }
   }
 
 
   void findDesiredAngle(float angle_d) {
-    forwardKinematics(encoderData.velocity[0], encoderData.velocity[1], 0.95);
-    while (currentPosition[2] > angle_d) {
-      motors.setSpeeds(100, -100);
-      forwardKinematics(encoderData.velocity[0], encoderData.velocity[1], 0.95);
-      display.clear();
-      display.print(angle_d);
-      display.gotoXY(0, 1);
-      display.print(currentPosition[2]);
+    float turnAngle = angle_d - currentPosition[2];
+    if (turnAngle < 0) {
+      turnAngle += 360;
     }
-    motors.setSpeeds(0, 0);
+
+    if (turnAngle <= 180) {
+      while (turnAngle > 1) {
+        motors.setSpeeds(-100, 100);
+        forwardKinematics(encoderData.velocity[0], encoderData.velocity[1], 0.95);
+        turnAngle = angle_d - currentPosition[2];
+        if (turnAngle < 0) {
+          turnAngle += 360;
+        }
+        screen(turnAngle, currentPosition[2]);
+      }
+      motors.setSpeeds(0, 0);
+    }
+
+    else if (turnAngle > 180) {
+      while (turnAngle > 1) {
+        motors.setSpeeds(100, -100);
+        forwardKinematics(encoderData.velocity[0], encoderData.velocity[1], 0.95);
+        turnAngle = angle_d - currentPosition[2];
+        if (turnAngle < 0) {
+          turnAngle += 360;
+        }
+        screen(turnAngle, currentPosition[2]);
+      }
+      motors.setSpeeds(0, 0);
+    }
+    screen(turnAngle, currentPosition[2]);
   }
 
-
-
-  void backwardKinematics(float x_d, float y_d, float angle_d) {
+  void
+  backwardKinematics(float x_d, float y_d, float angle_d) {
     forwardKinematics(encoderData.velocity[0], encoderData.velocity[1], 0.95);
-    findTargetAngle(x_d, y_d);
-    driveStraight(x_d, y_d);
-    findDesiredAngle(angle_d);
+    switch (backwardStage) {
+      case 0:
+        findTargetAngle(x_d, y_d);
+        backwardStage++;
+        break;
+      case 1:
+        driveStraight(x_d, y_d);
+        backwardStage++;
+        break;
+      case 2:
+        findDesiredAngle(angle_d);
+        backwardStage++;
+        break;
+    }
   }
 } kinematics;
 
@@ -158,9 +229,7 @@ void setup() {
 }
 
 void loop() {
-  kinematics.forwardKinematics(encoderData.velocity[0], encoderData.velocity[1], 0.95);
-  Serial.println((String) "X:\t" + kinematics.currentPosition[0] + "cm\t\tY:\t" + kinematics.currentPosition[1] + "cm\t\tθ:\t" + kinematics.currentPosition[2] + "°");
-  kinematics.backwardKinematics(20, 20, 20);
+  kinematics.backwardKinematics(10, 10, 0);
 
   /*
   switch (state){
@@ -171,7 +240,7 @@ void loop() {
       removeTree();
       break;
     case 2:
-      getBack();
+      kinematics.backwardKinematics(lastPosition[0], lastPosition[1], lastPosition[2]);
       break;
   }
   */
