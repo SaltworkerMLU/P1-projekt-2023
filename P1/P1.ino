@@ -110,7 +110,7 @@ struct kinematics {
     screen(turnAngle, currentPosition[2]);
   }
 
-  void driveStraight(float x_d, float y_d, float offset = 1) {
+  void driveStraight(float x_d, float y_d) {
     forwardKinematics(encoderData.velocity[0], encoderData.velocity[1], 0.95);
 
     if (currentPosition[0] < x_d) {
@@ -131,7 +131,6 @@ struct kinematics {
       motors.setSpeeds(0, 0);
     }
   }
-
 
   void findDesiredAngle(float angle_d) {
     float turnAngle = angle_d - currentPosition[2];
@@ -167,8 +166,7 @@ struct kinematics {
     screen(turnAngle, currentPosition[2]);
   }
 
-  void
-  backwardKinematics(float x_d, float y_d, float angle_d) {
+  void backwardKinematics(float x_d, float y_d, float angle_d) {
     forwardKinematics(encoderData.velocity[0], encoderData.velocity[1], 0.95);
     switch (backwardStage) {
       case 0:
@@ -202,13 +200,6 @@ void removeTree() {
   //turn to tree
   //move to tree
   //push tree out of bounds
-}
-
-void getBack() {
-  //turn towards last position
-  //drive to last postiion
-  //turn to last postion
-  state = 0;
 }
 
 void movement() {
