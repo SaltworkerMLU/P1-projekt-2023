@@ -62,6 +62,28 @@ struct kinematics {
       currentPosition[2] = currentPosition[2] - 360;
     }
   }
+  void findTargetAngle(float x_d, float y_d) {
+    forwardKinematics(encoderData.velocity[0], encoderData.velocity[1], 0.95);
+    float a = x_d - currentPosition[0];
+    float b = y_d - currentPosition[1];
+    float teta = (atan(b / a)) / PI * 180;
+    while (currentPosition[2] < teta) {
+      motors.setSpeeds(100, -100);
+      forwardKinematics(encoderData.velocity[0], encoderData.velocity[1], 0.95);
+      display.clear();
+      display.print(teta);
+      display.gotoXY(0, 1);
+      display.print(currentPosition[2]);
+    }
+    motors.setSpeeds(0, 0);
+  }
+  void backwardKinematics(float x_d, float y_d, float angle_d) {
+    forwardKinematics(encoderData.velocity[0], encoderData.velocity[1], 0.95);
+    findTargetAngle(x_d, y_d);
+    //driveStraight();
+    //findDesiredAngle();
+  }
+
 } kinematics;
 
 
@@ -97,8 +119,8 @@ bool treeDetected() {
   }
 }
 
-void stop(){
-  motors.setSpeeds(0,0);
+void stop() {
+  motors.setSpeeds(0, 0);
 }
 
 void setup() {
@@ -107,7 +129,9 @@ void setup() {
 
 void loop() {
   kinematics.forwardKinematics(encoderData.velocity[0], encoderData.velocity[1], 0.95);
-  Serial.println((String) "X:\t" + kinematics.currentPosition[0] + "cm\t\tY:\t" + kinematics.currentPosition[1] + "cm\t\tθ:\t" + kinematics.currentPosition[2] + "°");
+  kinematics.findTargetAngle(2, 2);
+
+
   /*
   switch (state){
     case 0: 
