@@ -15,8 +15,8 @@ int16_t turnRate;
 int16_t gyroOffset;
 uint16_t gyroLastUpdate = 0;
 
-float boundsX;
-float boundsY;
+float boundsX = 95.7;
+float boundsY = 76;
 int state;
 float lastPosition[3];
 
@@ -34,7 +34,7 @@ void stop() {
 /* 
 Gyro setup and convenience functions '
 */
-void turnSensorSetup(){
+void turnSensorSetup() {
   Wire.begin();
   imu.init();
   imu.enableDefault();
@@ -51,10 +51,9 @@ void turnSensorSetup(){
 
   // Calibrate the gyro.
   int32_t total = 0;
-  for (uint16_t i = 0; i < 1024; i++)
-  {
+  for (uint16_t i = 0; i < 1024; i++) {
     // Wait for new data to be available, then read it.
-    while(!imu.gyroDataReady()) {}
+    while (!imu.gyroDataReady()) {}
     imu.readGyro();
 
     // Add the Z axis reading to the total.
@@ -71,14 +70,14 @@ void turnSensorSetup(){
 
 // This should be called to set the starting point for measuring
 // a turn.  After calling this, turnAngle will be 0.
-void turnSensorReset(){
+void turnSensorReset() {
   gyroLastUpdate = micros();
   turnAngle = 0;
 }
 
 // Read the gyro and update the angle.  This should be called as
 // frequently as possible while using the gyro to do turns.
-void turnSensorUpdate(){
+void turnSensorUpdate() {
   // Read the measurements from the gyro.
   imu.readGyro();
   turnRate = imu.g.z - gyroOffset;
@@ -104,7 +103,7 @@ void turnSensorUpdate(){
   turnAngle += (int64_t)d * 14680064 / 17578125;
 }
 
-uint32_t getTurnAngleInDegrees(){
+uint32_t getTurnAngleInDegrees() {
   turnSensorUpdate();
   // do some math and pointer magic to turn angle in seconds to angle in degree
   return (((uint32_t)turnAngle >> 16) * 360) >> 16;
@@ -139,7 +138,7 @@ struct encoderData {
 
 
 struct kinematics {
-  float currentPosition[3] = { 0, 0, 0 };
+  float currentPosition[3] = { 7, 6.4, 0 };
   int r = 2;
   int s = 85;
   long excecutedTime = micros();
@@ -160,9 +159,23 @@ struct kinematics {
     }
   }
 
+  void turnByAngle(float turnAngle, float angle, int dir) {
+    while (turnAngle >= 1) {
+      motors.setSpeeds(dir * -106, dir * 100);
+      forwardKinematics(encoderData.velocity[0], encoderData.velocity[1], 0.95);
+      turnAngle = angle - currentPosition[2];
+      if (turnAngle < 0) {
+        turnAngle += 360;
+      }
+      screen(turnAngle, currentPosition[2]);
+    }
+    stop();
+  }
+
   void findTargetAngle(float x_d, float y_d) {
     forwardKinematics(encoderData.velocity[0], encoderData.velocity[1], 0.95);
     float teta = (atan2(y_d, x_d)) / PI * 180;
+    int dir = -1;
     if (teta < 0) {
       teta += 360;
     }
@@ -173,32 +186,12 @@ struct kinematics {
     }
 
     if (turnAngle <= 180) {
-      while (turnAngle >= 1) {
-        motors.setSpeeds(-106, 100);
-        forwardKinematics(encoderData.velocity[0], encoderData.velocity[1], 0.95);
-        turnAngle = teta - currentPosition[2];
-        if (turnAngle < 0) {
-          turnAngle += 360;
-        }
-        screen(turnAngle, currentPosition[2]);
-      }
-      motors.setSpeeds(0, 0);
+      dir = 1;
     }
 
-    else if (turnAngle > 180) {
-      while (turnAngle >= 1) {
-        motors.setSpeeds(106, -100);
-        forwardKinematics(encoderData.velocity[0], encoderData.velocity[1], 0.95);
-        turnAngle = teta - currentPosition[2];
-        if (turnAngle < 0) {
-          turnAngle += 360;
-        }
-        screen(turnAngle, currentPosition[2]);
-      }
-      stop();
-    }
-    screen(turnAngle, currentPosition[2]);
+    turnByAngle(turnAngle, teta, dir);
   }
+
 
   void driveStraight(float x_d, float y_d) {
     forwardKinematics(encoderData.velocity[0], encoderData.velocity[1], 0.95);
@@ -224,36 +217,14 @@ struct kinematics {
 
   void findDesiredAngle(float angle_d) {
     float turnAngle = angle_d - currentPosition[2];
+    int dir = -1;
     if (turnAngle < 0) {
       turnAngle += 360;
     }
-
     if (turnAngle <= 180) {
-      while (turnAngle >= 1) {
-        motors.setSpeeds(-106, 100);
-        forwardKinematics(encoderData.velocity[0], encoderData.velocity[1], 0.95);
-        turnAngle = angle_d - currentPosition[2];
-        if (turnAngle < 0) {
-          turnAngle += 360;
-        }
-        screen(turnAngle, currentPosition[2]);
-      }
-      stop();
+      dir = 1;
     }
-
-    else if (turnAngle > 180) {
-      while (turnAngle >= 1) {
-        motors.setSpeeds(106, -100);
-        forwardKinematics(encoderData.velocity[0], encoderData.velocity[1], 0.95);
-        turnAngle = angle_d - currentPosition[2];
-        if (turnAngle < 0) {
-          turnAngle += 360;
-        }
-        screen(turnAngle, currentPosition[2]);
-      }
-      stop();
-    }
-    screen(turnAngle, currentPosition[2]);
+    turnByAngle(turnAngle, angle_d, dir);
   }
 
   void backwardKinematics(float x_d, float y_d, float angle_d) {
@@ -309,7 +280,7 @@ void setup() {
 }
 
 void loop() {
-  kinematics.backwardKinematics(-10, 10, 270);
+  kinematics.backwardKinematics(38, 24, 180);
 
   /*
   switch (state){
