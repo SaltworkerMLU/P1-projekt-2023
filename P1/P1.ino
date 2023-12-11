@@ -1,13 +1,11 @@
 #include <Wire.h>
 #include <Zumo32U4.h>
 
-Zumo32U4Motors motors;
-Zumo32U4LineSensors lineSensors;
-Zumo32U4OLED display;
-Zumo32U4Encoders encoders;
 Zumo32U4IMU imu;
-Zumo32U4Buzzer buzzer;
-Zumo32U4ButtonA buttonA;
+Zumo32U4OLED display;
+Zumo32U4Motors motors;
+Zumo32U4Encoders encoders;
+Zumo32U4ProximitySensors proxSensors;
 
 // variables for gyro
 uint32_t turnAngle = 0;
@@ -15,13 +13,16 @@ int16_t turnRate;
 int16_t gyroOffset;
 uint16_t gyroLastUpdate = 0;
 
-float boundsY = 95.7;
+
+float boundsY = 100.7;
 float boundsX = 76;
 int state = 0;
 float lastPosition[3];
 int pathCount = 1;
 int pathPart = 0;
-int bitch = 0;
+uint8_t value[6];
+int speed = 100;
+
 
 void screen(float line1, float line2) {
   display.clear();
@@ -32,6 +33,10 @@ void screen(float line1, float line2) {
 
 void stop() {
   motors.setSpeeds(0, 0);
+}
+
+void forward(int spdL = speed, int spdR = speed) {
+  motors.setSpeeds(1.06 * spdL, spdR);
 }
 
 /* 
@@ -112,16 +117,33 @@ uint32_t getTurnAngleInDegrees() {
   return (((uint32_t)turnAngle >> 16) * 360) >> 16;
 }
 
+void getProximity() {
+  proxSensors.read();
+
+  value[0] = proxSensors.countsLeftWithLeftLeds();
+  value[1] = proxSensors.countsLeftWithRightLeds();
+
+  value[2] = proxSensors.countsFrontWithLeftLeds();
+  value[3] = proxSensors.countsFrontWithRightLeds();
+
+  value[4] = proxSensors.countsRightWithLeftLeds();
+  value[5] = proxSensors.countsRightWithRightLeds();
+}
 
 struct encoderData {
   float distance[2];
   float velocity[2];
   long passedTime[2];
   float passedDistance[2];
+  long deltaEncoders[2];
+
+
 
   void getDistance() {
-    distance[0] = 8 * acos(0.0) * encoders.getCountsLeft() / 900;
-    distance[1] = 8 * acos(0.0) * encoders.getCountsRight() / 900;
+    deltaEncoders[0] += encoders.getCountsAndResetLeft();
+    deltaEncoders[1] += encoders.getCountsAndResetRight();
+    distance[0] = 8 * acos(0.0) * deltaEncoders[0] / 900;
+    distance[1] = 8 * acos(0.0) * deltaEncoders[1] / 900;
   }
 
   void getVelocity() {
@@ -154,12 +176,6 @@ struct kinematics {
     currentPosition[0] += Offset * (v1 + v2) * cos(currentPosition[2] * PI / 180) * dt / (2 * 1000000);  //funktion (9)
     currentPosition[1] += Offset * (v1 + v2) * sin(currentPosition[2] * PI / 180) * dt / (2 * 1000000);
     currentPosition[2] = getTurnAngleInDegrees();
-    if (currentPosition[2] < 0) {
-      currentPosition[2] = currentPosition[2] + 360;
-    }
-    if (currentPosition[2] > 360) {
-      currentPosition[2] = currentPosition[2] - 360;
-    }
   }
 
   void turnByAngle(float angle) {
@@ -172,13 +188,13 @@ struct kinematics {
       dir = 1;
     }
     while (turnAngle >= 1) {
-      motors.setSpeeds(dir * -106, dir * 100);
+      forward(dir * -speed, dir * speed);
       forwardKinematics(encoderData.velocity[0], encoderData.velocity[1], 0.95);
       turnAngle = angle - currentPosition[2];
       if (turnAngle < 0) {
         turnAngle += 360;
       }
-      screen(currentPosition[0], currentPosition[1]);
+      screen(value[0], value[5]);
     }
     stop();
   }
@@ -203,26 +219,12 @@ struct kinematics {
     float distanceDriven = sqrt((currentPosition[0] - xStart) * (currentPosition[0] - xStart) + (currentPosition[1] - yStart) * (currentPosition[1] - yStart));
 
     while (distanceTotal - distanceDriven > 0) {
-      motors.setSpeeds(106, 100);
+      forward();
       forwardKinematics(encoderData.velocity[0], encoderData.velocity[1], 0.95);
       distanceDriven = sqrt((currentPosition[0] - xStart) * (currentPosition[0] - xStart) + (currentPosition[1] - yStart) * (currentPosition[1] - yStart));
-      screen(currentPosition[0], currentPosition[1]);
+      screen(value[0], value[5]);
     }
     stop();
-    /*
-    float xCurrent = x_d - currentPosition[0];
-    float yCurrent = y_d - currentPosition[1];
-    float difference = ((xCurrent + yCurrent)*(xCurrent + yCurrent));
-    while (difference>1){
-      motors.setSpeeds(106, 100);
-      forwardKinematics(encoderData.velocity[0], encoderData.velocity[1], 0.95);
-      xCurrent = x_d - currentPosition[0];
-      yCurrent = y_d - currentPosition[1];
-      difference = ((xCurrent + yCurrent)*(xCurrent + yCurrent));
-      screen(lastPosition[0],lastPosition[1]);
-    }
-    stop();
-    */
   }
 
   void backwardKinematics(float x_d, float y_d, float angle_d) {
@@ -257,22 +259,25 @@ void patrol() {
     kinematics.forwardKinematics(encoderData.velocity[0], encoderData.velocity[1], 0.95);
     if (treeDetected()) {
       stop();
+      lastPosition[0] = kinematics.currentPosition[0];
+      lastPosition[1] = kinematics.currentPosition[1];
+      lastPosition[2] = kinematics.currentPosition[2];
       state++;
     } else {
       switch (pathPart) {
         case 0:
-          if (kinematics.currentPosition[0] < boundsX - 6.4) {
-            motors.setSpeeds(106, 100);
-            screen(kinematics.currentPosition[0], kinematics.currentPosition[1]);
+          if (kinematics.currentPosition[0] < boundsX - 5) {
+            forward();
+            screen(value[0], value[5]);
           } else {
             kinematics.turnByAngle(90);
             pathPart++;
           }
           break;
         case 1:
-          if (kinematics.currentPosition[1] < pathCount * 17.2) {
-            motors.setSpeeds(106, 100);
-            screen(kinematics.currentPosition[0], kinematics.currentPosition[1]);
+          if (kinematics.currentPosition[1] < pathCount * 17.2 + 6.4) {
+            forward();
+            screen(value[0], value[5]);
           } else {
             kinematics.turnByAngle(180);
 
@@ -281,19 +286,19 @@ void patrol() {
           }
           break;
         case 2:
-          if (kinematics.currentPosition[0] > 6.4) {
-            motors.setSpeeds(106, 100);
-            screen(kinematics.currentPosition[0], kinematics.currentPosition[1]);
+          if (kinematics.currentPosition[0] > 8.4) {
+            forward();
+            screen(value[0], value[5]);
           } else {
             kinematics.turnByAngle(90);
-            screen(kinematics.currentPosition[0], kinematics.currentPosition[1]);
+            screen(value[0], value[5]);
             pathPart++;
           }
           break;
         case 3:
-          if (kinematics.currentPosition[1] < pathCount * 17.2) {
-            motors.setSpeeds(106, 100);
-            screen(kinematics.currentPosition[0], kinematics.currentPosition[1]);
+          if (kinematics.currentPosition[1] < pathCount * 17.2 + 6.4) {
+            forward();
+            screen(value[0], value[5]);
           } else {
             kinematics.turnByAngle(0);
             pathCount++;
@@ -307,35 +312,84 @@ void patrol() {
 }
 
 void removeTree() {
-  kinematics.backwardKinematics(40, 60, 0);
-  stop();
-}
+  int dt;
+  bool run;
+  //Find turn direction
+  int turnDirection = 0;
+  getProximity();
+  if (value[0] > 5) {
+    turnDirection = 1;
+  } else if (value[5] > 5) {
+    turnDirection = -1;
+  }
+
+  //find closest bounds
+  int orientation = 90;
 
 
-bool treeDetected() {
-  switch (bitch) {
-    case 0:
-      if (millis() > 12000) {
-        bitch++;
-        return true;
-      } else {
-        return false;
+  run = true;
+  while (run) {
+    //drive turn until correct orientation
+    float turnAngle = 1;
+    kinematics.forwardKinematics(encoderData.velocity[0], encoderData.velocity[1], 0.95);
+    while (turnAngle >= 1) {
+      forward(100 - turnDirection * 50, 100 + turnDirection * 50);
+      kinematics.forwardKinematics(encoderData.velocity[0], encoderData.velocity[1], 0.95);
+      turnAngle = orientation - kinematics.currentPosition[2];
+      if (turnAngle < 0) {
+        turnAngle += 360;
       }
-      break;
-    case 1:
-      return false;
-      break;
+    }
+
+    //turn 90 in turn direction
+    stop();
+    orientation += 90 * turnDirection;
+    if (orientation < 0) {
+      orientation += 360;
+    }
+    if (orientation > 360) {
+      orientation -= 360;
+    }
+    kinematics.turnByAngle(orientation);
+
+    //drive until bounds
+    kinematics.forwardKinematics(encoderData.velocity[0], encoderData.velocity[1], 0.95);
+    while (5 < kinematics.currentPosition[0] && kinematics.currentPosition[0] < boundsX - 5 && 5 < kinematics.currentPosition[1] && kinematics.currentPosition[1] < boundsY - 5) {
+      kinematics.forwardKinematics(encoderData.velocity[0], encoderData.velocity[1], 0.95);
+      forward();
+      screen(kinematics.currentPosition[0], kinematics.currentPosition[1]);
+    }
+    stop();
+    state++;
+    run = false;
   }
 }
 
 
 
+
+
+bool treeDetected() {
+  getProximity();
+  if (value[0] > 8 || value[5] > 8) {
+    return true;
+  } else {
+    return false;
+  }
+}
+
 void setup() {
   Serial.begin(9600);
   turnSensorSetup();
+  int brightnessLevels[20];
+  for (int i = 0; i < 20; i++) {
+    brightnessLevels[i] = 2 * i + 10;
+  }
+  proxSensors.setBrightnessLevels(brightnessLevels, 20);
+  proxSensors.initThreeSensors();
+  proxSensors.setPulseOffTimeUs(0);
+  proxSensors.setPulseOnTimeUs(0);
 }
-
-
 
 void loop() {
   switch (state) {
@@ -343,16 +397,9 @@ void loop() {
       patrol();
       break;
     case 1:
-      stop();
-      lastPosition[0] = kinematics.currentPosition[0];
-      lastPosition[1] = kinematics.currentPosition[1];
-      lastPosition[2] = kinematics.currentPosition[2];
-      state++;
-    case 2:
       removeTree();
-      state++;
       break;
-    case 3:
+    case 2:
       kinematics.backwardKinematics(lastPosition[0], lastPosition[1], lastPosition[2]);
       state = 0;
       break;
