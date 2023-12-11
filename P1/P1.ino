@@ -176,7 +176,7 @@ struct kinematics {
     excecutedTime = micros();
     currentPosition[0] += Offset * (v1 + v2) * cos(currentPosition[2] * PI / 180) * dt / (2 * 1000000);  //funktion (9)
     currentPosition[1] += Offset * (v1 + v2) * sin(currentPosition[2] * PI / 180) * dt / (2 * 1000000);
-    currentPosition[2] = getTurnAngleInDegrees() + (millis()/8000);
+    currentPosition[2] = getTurnAngleInDegrees() + (millis()/11000);
   }
 
   void turnByAngle(float angle) {
