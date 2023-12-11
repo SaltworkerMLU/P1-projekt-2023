@@ -13,7 +13,6 @@ int16_t turnRate;
 int16_t gyroOffset;
 uint16_t gyroLastUpdate = 0;
 
-
 float boundsY = 98.7;
 float boundsX = 76;
 int state = 0;
@@ -23,7 +22,6 @@ int pathPart = 0;
 uint8_t value[6];
 int speed = 100;
 int turnDirection = 0;
-
 
 void screen(float line1, float line2) {
   display.clear();
@@ -123,10 +121,8 @@ void getProximity() {
 
   value[0] = proxSensors.countsLeftWithLeftLeds();
   value[1] = proxSensors.countsLeftWithRightLeds();
-
   value[2] = proxSensors.countsFrontWithLeftLeds();
   value[3] = proxSensors.countsFrontWithRightLeds();
-
   value[4] = proxSensors.countsRightWithLeftLeds();
   value[5] = proxSensors.countsRightWithRightLeds();
 }
@@ -138,8 +134,6 @@ struct encoderData {
   float passedDistance[2];
   long deltaEncoders[2];
 
-
-
   void getDistance() {
     deltaEncoders[0] += encoders.getCountsAndResetLeft();
     deltaEncoders[1] += encoders.getCountsAndResetRight();
@@ -149,7 +143,6 @@ struct encoderData {
 
   void getVelocity() {
     getDistance();
-
     long dt = micros() - passedTime[0];
     passedTime[0] = micros();
     velocity[0] = 1000000 * (distance[0] - passedDistance[0]) / dt;
@@ -161,7 +154,6 @@ struct encoderData {
     passedDistance[1] = distance[1];
   }
 } encoderData;
-
 
 struct kinematics {
   float currentPosition[3] = { 7, 6.4, 0 };
@@ -176,7 +168,7 @@ struct kinematics {
     excecutedTime = micros();
     currentPosition[0] += Offset * (v1 + v2) * cos(currentPosition[2] * PI / 180) * dt / (2 * 1000000);  //funktion (9)
     currentPosition[1] += Offset * (v1 + v2) * sin(currentPosition[2] * PI / 180) * dt / (2 * 1000000);
-    currentPosition[2] = getTurnAngleInDegrees() + (millis()/11000);
+    currentPosition[2] = getTurnAngleInDegrees() + (millis() / 10000);
   }
 
   void turnByAngle(float angle) {
@@ -223,7 +215,7 @@ struct kinematics {
       forward();
       forwardKinematics(encoderData.velocity[0], encoderData.velocity[1], 0.95);
       distanceDriven = sqrt((currentPosition[0] - xStart) * (currentPosition[0] - xStart) + (currentPosition[1] - yStart) * (currentPosition[1] - yStart));
-      screen(currentPosition[0],currentPosition[1]);
+      screen(currentPosition[0], currentPosition[1]);
     }
     stop();
   }
@@ -251,9 +243,7 @@ struct kinematics {
       }
     }
   }
-
 } kinematics;
-
 
 void patrol() {
   while (kinematics.currentPosition[1] < boundsY && state == 0) {
@@ -281,7 +271,6 @@ void patrol() {
             screen(kinematics.currentPosition[0], kinematics.currentPosition[1]);
           } else {
             kinematics.turnByAngle(180);
-
             pathCount++;
             pathPart++;
           }
@@ -314,10 +303,7 @@ void patrol() {
 
 void removeTree() {
   bool run;
-  //find closest bounds
   int orientation = 90;
-
-
   run = true;
   while (run) {
     //drive turn until correct orientation
@@ -356,21 +342,15 @@ void removeTree() {
   }
 }
 
-
-
-
-
 int treeDetected() {
   getProximity();
   if (value[0] > 7) {
     turnDirection = 1;
     return true;
-  } 
-  else if (value[5] > 7) {
+  } else if (value[5] > 7) {
     turnDirection = -1;
     return true;
-  } 
-  else {
+  } else {
     return false;
   }
 }
