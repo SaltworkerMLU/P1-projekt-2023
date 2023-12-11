@@ -38,7 +38,8 @@ void stop() {
 
 //drives forward
 void forward(int spdL = speed, int spdR = speed) {
-  motors.setSpeeds(1.06 * spdL, spdR); //scaled by 1.06 to account for drag of left motor
+  float power = (int16_t)readBatteryMillivolts(); // uint16_t -> int16_t -> float
+  motors.setSpeeds(1.06 * spdL * pow(5000,1.25)/pow(power,1.25), spdR * pow(5000,1.25)/pow(power,1.25)); //scaled by 1.06 to account for drag of left motor and by the power level of the battery
 }
 
 /* 
