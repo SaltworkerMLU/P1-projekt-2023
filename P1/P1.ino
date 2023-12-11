@@ -14,7 +14,7 @@ int16_t gyroOffset;
 uint16_t gyroLastUpdate = 0;
 
 
-float boundsY = 100.7;
+float boundsY = 98.7;
 float boundsX = 76;
 int state = 0;
 float lastPosition[3];
@@ -22,6 +22,7 @@ int pathCount = 1;
 int pathPart = 0;
 uint8_t value[6];
 int speed = 100;
+int turnDirection = 0;
 
 
 void screen(float line1, float line2) {
@@ -175,7 +176,7 @@ struct kinematics {
     excecutedTime = micros();
     currentPosition[0] += Offset * (v1 + v2) * cos(currentPosition[2] * PI / 180) * dt / (2 * 1000000);  //funktion (9)
     currentPosition[1] += Offset * (v1 + v2) * sin(currentPosition[2] * PI / 180) * dt / (2 * 1000000);
-    currentPosition[2] = getTurnAngleInDegrees();
+    currentPosition[2] = getTurnAngleInDegrees() + (millis()/8000);
   }
 
   void turnByAngle(float angle) {
@@ -194,7 +195,7 @@ struct kinematics {
       if (turnAngle < 0) {
         turnAngle += 360;
       }
-      screen(value[0], value[5]);
+      screen(currentPosition[0], currentPosition[1]);
     }
     stop();
   }
@@ -222,7 +223,7 @@ struct kinematics {
       forward();
       forwardKinematics(encoderData.velocity[0], encoderData.velocity[1], 0.95);
       distanceDriven = sqrt((currentPosition[0] - xStart) * (currentPosition[0] - xStart) + (currentPosition[1] - yStart) * (currentPosition[1] - yStart));
-      screen(value[0], value[5]);
+      screen(currentPosition[0],currentPosition[1]);
     }
     stop();
   }
@@ -268,7 +269,7 @@ void patrol() {
         case 0:
           if (kinematics.currentPosition[0] < boundsX - 5) {
             forward();
-            screen(value[0], value[5]);
+            screen(kinematics.currentPosition[0], kinematics.currentPosition[1]);
           } else {
             kinematics.turnByAngle(90);
             pathPart++;
@@ -277,7 +278,7 @@ void patrol() {
         case 1:
           if (kinematics.currentPosition[1] < pathCount * 17.2 + 6.4) {
             forward();
-            screen(value[0], value[5]);
+            screen(kinematics.currentPosition[0], kinematics.currentPosition[1]);
           } else {
             kinematics.turnByAngle(180);
 
@@ -288,17 +289,17 @@ void patrol() {
         case 2:
           if (kinematics.currentPosition[0] > 8.4) {
             forward();
-            screen(value[0], value[5]);
+            screen(kinematics.currentPosition[0], kinematics.currentPosition[1]);
           } else {
             kinematics.turnByAngle(90);
-            screen(value[0], value[5]);
+            screen(kinematics.currentPosition[0], kinematics.currentPosition[1]);
             pathPart++;
           }
           break;
         case 3:
           if (kinematics.currentPosition[1] < pathCount * 17.2 + 6.4) {
             forward();
-            screen(value[0], value[5]);
+            screen(kinematics.currentPosition[0], kinematics.currentPosition[1]);
           } else {
             kinematics.turnByAngle(0);
             pathCount++;
@@ -312,17 +313,7 @@ void patrol() {
 }
 
 void removeTree() {
-  int dt;
   bool run;
-  //Find turn direction
-  int turnDirection = 0;
-  getProximity();
-  if (value[0] > 5) {
-    turnDirection = 1;
-  } else if (value[5] > 5) {
-    turnDirection = -1;
-  }
-
   //find closest bounds
   int orientation = 90;
 
@@ -333,7 +324,7 @@ void removeTree() {
     float turnAngle = 1;
     kinematics.forwardKinematics(encoderData.velocity[0], encoderData.velocity[1], 0.95);
     while (turnAngle >= 1) {
-      forward(100 - turnDirection * 50, 100 + turnDirection * 50);
+      forward(100 - turnDirection * 60, 100 + turnDirection * 60);
       kinematics.forwardKinematics(encoderData.velocity[0], encoderData.velocity[1], 0.95);
       turnAngle = orientation - kinematics.currentPosition[2];
       if (turnAngle < 0) {
@@ -369,11 +360,17 @@ void removeTree() {
 
 
 
-bool treeDetected() {
+int treeDetected() {
   getProximity();
-  if (value[0] > 8 || value[5] > 8) {
+  if (value[0] > 7) {
+    turnDirection = 1;
     return true;
-  } else {
+  } 
+  else if (value[5] > 7) {
+    turnDirection = -1;
+    return true;
+  } 
+  else {
     return false;
   }
 }
