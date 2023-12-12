@@ -373,6 +373,7 @@ void removeTree() {
       if (turnAngle < 0) {
         turnAngle += 360;
       }
+      screen(kinematics.currentPosition[0], kinematics.currentPosition[1]);
     }
 
     //the zumo turns 90 degrees in the turn direction from above, in order to face towards the tree
@@ -455,6 +456,7 @@ void loop() {
       stop();
       display.clear();
       display.print("Done!");
+      delay(1000);
       break;
   }
 }
