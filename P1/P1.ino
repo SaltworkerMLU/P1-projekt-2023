@@ -341,6 +341,7 @@ void patrol() {
   stop(); //stop when the loop is finished (when the zumo reaches the bounds in the y direction)
   kinematics.forwardKinematics();
   if (kinematics.currentPosition[1] > boundsY){
+    kinematics.backwardKinematics(7, 6.4, 0);
     state = 3;
   }
 }
@@ -451,7 +452,6 @@ void loop() {
       state = 0;
       break;
     case 3:
-      kinematics.backwardKinematics(7, 6.4, 0);
       stop();
       break;
   }
