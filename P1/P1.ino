@@ -352,18 +352,7 @@ void removeTree() {
     //The zumo drives in a curve around the tree, until it reaches the target orientation
     float turnAngle = 1;
     kinematics.forwardKinematics(encoderData.velocity[0], encoderData.velocity[1], 0.95);
-    if (kinematics.currentPosition[0] < boundsX / 2) {
-      kinematics.turnByAngle(90 - turnDirection * 90);
-      stop();
-      //turnDirection = turnDirection * -1;
-      orientation = kinematics.currentPosition[2] + 90 * turnDirection;
-    if (orientation < 0) {
-      orientation += 360;
-    }
-    if (orientation > 360) {
-        orientation -= 360;
-      }
-    }
+
     while (turnAngle >= 1) {
       forward(100 - turnDirection * 60, 100 + turnDirection * 60);  //turn direction is found in the treeDetected() function
       kinematics.forwardKinematics(encoderData.velocity[0], encoderData.velocity[1], 0.95);
