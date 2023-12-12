@@ -175,12 +175,12 @@ struct kinematics {
   int backwardStage = 0;
 
   //function for finding the position of the zumo in the virtual coordinate system
-  void forwardKinematics(float v1, float v2, float Offset) {
+  void forwardKinematics() {
     encoderData.getVelocity();
     long dt = micros() - excecutedTime;
     excecutedTime = micros();
-    currentPosition[0] += Offset * (v1 + v2) * cos(currentPosition[2] * PI / 180) * dt / (2 * 1000000);  //function (9) of the kinematics section
-    currentPosition[1] += Offset * (v1 + v2) * sin(currentPosition[2] * PI / 180) * dt / (2 * 1000000);
+    currentPosition[0] += 0.95 * (encoderData.velocity[0] + encoderData.velocity[1]) * cos(currentPosition[2] * PI / 180) * dt / (2 * 1000000);  //function (9) of the kinematics section
+    currentPosition[1] += 0.95 * (encoderData.velocity[0] + encoderData.velocity[1]) * sin(currentPosition[2] * PI / 180) * dt / (2 * 1000000);
     currentPosition[2] = getTurnAngleInDegrees(); //zumo angle = the angle read by the gyro (adds a little over time to  gyro drift)
   }
 
@@ -200,7 +200,7 @@ struct kinematics {
     //the zumo turns until difference between desired angle and current angle of the zumo is less than 1
     while (turnAngle >= 1) {
       forward(dir * -speed, dir * speed);                                         //turn in chosen direction
-      forwardKinematics(encoderData.velocity[0], encoderData.velocity[1], 0.95);  //updates position of the zumo
+      forwardKinematics();  //updates position of the zumo
 
       //updates difference in angle
       turnAngle = angle - currentPosition[2];
@@ -214,7 +214,7 @@ struct kinematics {
 
   //function for finding the angle between the zumos current position and the desired position and turns the zumo so its facing the desired point
   void findTargetAngle(float x_d, float y_d) {
-    forwardKinematics(encoderData.velocity[0], encoderData.velocity[1], 0.95);  //updates zumo position
+    forwardKinematics();  //updates zumo position
     x_d = x_d - currentPosition[0];                                             //finds difference between current position and desired position
     y_d = y_d - currentPosition[1];
     float teta = (atan2(y_d, x_d)) / PI * 180;  //calculates angle between the two points
@@ -229,7 +229,7 @@ struct kinematics {
 
   //function for driving the zumo to desired coordinates
   void driveStraight(float x_d, float y_d) {
-    forwardKinematics(encoderData.velocity[0], encoderData.velocity[1], 0.95);  //updates zumo position
+    forwardKinematics();  //updates zumo position
     float xStart = currentPosition[0];                                          //saves starting position of the drive
     float yStart = currentPosition[1];
     float distanceTotal = sqrt((x_d - xStart) * (x_d - xStart) + (y_d - yStart) * (y_d - yStart));                                                               //calculates distance from start position to desired position
@@ -238,7 +238,7 @@ struct kinematics {
     //drives until distance from start to zumo is the same as distance from start to desired position
     while (distanceTotal - distanceDriven > 0) {
       forward();
-      forwardKinematics(encoderData.velocity[0], encoderData.velocity[1], 0.95);  //continuously updates zumo position and calculates distance from start position
+      forwardKinematics();  //continuously updates zumo position and calculates distance from start position
       distanceDriven = sqrt((currentPosition[0] - xStart) * (currentPosition[0] - xStart) + (currentPosition[1] - yStart) * (currentPosition[1] - yStart));
       screen(currentPosition[0], currentPosition[1]);
     }
@@ -249,7 +249,7 @@ struct kinematics {
   void backwardKinematics(float x_d, float y_d, float angle_d) {
     bool run = true;
     while (run) {
-      forwardKinematics(encoderData.velocity[0], encoderData.velocity[1], 0.95);
+      forwardKinematics();
       switch (backwardStage) {
         case 0:
           findTargetAngle(x_d, y_d);  //finds the necessary angle for the zumo to be facing the desired point, and turns the zumo to face it
@@ -275,7 +275,7 @@ struct kinematics {
 void patrol() {
   //function runs as long as the zumo is within bounds y
   while (kinematics.currentPosition[1] < boundsY && state == 0) {
-    kinematics.forwardKinematics(encoderData.velocity[0], encoderData.velocity[1], 0.95);
+    kinematics.forwardKinematics();
 
     //if the proximitysensors detects a tree, the zumo saves its current position, breaks the patrol loop and moves on to the next state in the main loop
     if (treeDetected()) {
@@ -338,7 +338,11 @@ void patrol() {
       }
     }
   }
-  stop();  //stop when the loop is finished (when the zumo reaches the bounds in the y direction)
+  stop(); //stop when the loop is finished (when the zumo reaches the bounds in the y direction)
+  kinematics.forwardKinematics();
+  if (kinematics.currentPosition[1] > boundsY){
+    state = 3;
+  }
 }
 
 //function for removing trees from the area
@@ -349,13 +353,21 @@ void removeTree() {
 
   run = true;
   while (run) {
+
+    long dt;
     //The zumo drives in a curve around the tree, until it reaches the target orientation
     float turnAngle = 1;
-    kinematics.forwardKinematics(encoderData.velocity[0], encoderData.velocity[1], 0.95);
+    kinematics.forwardKinematics();
+
+    dt = millis();
+    while (millis() - dt < 300){
+      kinematics.forwardKinematics();
+      forward();
+    }
 
     while (turnAngle >= 1) {
       forward(100 - turnDirection * 60, 100 + turnDirection * 60);  //turn direction is found in the treeDetected() function
-      kinematics.forwardKinematics(encoderData.velocity[0], encoderData.velocity[1], 0.95);
+      kinematics.forwardKinematics();
       turnAngle = orientation - kinematics.currentPosition[2];
       if (turnAngle < 0) {
         turnAngle += 360;
@@ -374,9 +386,9 @@ void removeTree() {
     kinematics.turnByAngle(orientation);
 
     //the zumo drives forwards with the tree until it reaches a boundry line
-    kinematics.forwardKinematics(encoderData.velocity[0], encoderData.velocity[1], 0.95);
+    kinematics.forwardKinematics();
     while (5 < kinematics.currentPosition[0] && kinematics.currentPosition[0] < boundsX - 5 && 5 < kinematics.currentPosition[1] && kinematics.currentPosition[1] < boundsY - 5) {
-      kinematics.forwardKinematics(encoderData.velocity[0], encoderData.velocity[1], 0.95);
+      kinematics.forwardKinematics();
       forward();
       screen(kinematics.currentPosition[0], kinematics.currentPosition[1]);
     }
@@ -437,6 +449,10 @@ void loop() {
     case 2:
       kinematics.backwardKinematics(lastPosition[0], lastPosition[1], lastPosition[2]);  //the zumo returns to its position before from before removing the tree, and goes back to patrol loop
       state = 0;
+      break;
+    case 3:
+      kinematics.backwardKinematics(7, 6.4, 0);
+      stop();
       break;
   }
 }
