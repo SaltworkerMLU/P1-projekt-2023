@@ -38,7 +38,8 @@ void stop() {
 
 //drives forward
 void forward(int spdL = speed, int spdR = speed) {
-  motors.setSpeeds(1.06 * spdL, spdR);  //scaled by 1.06 to account for drag of left motor
+  float power = (int16_t)readBatteryMillivolts(); // uint16_t -> int16_t -> float
+  motors.setSpeeds(1.06 * spdL * pow(5000,1.25)/pow(power,1.25), spdR * pow(5000,1.25)/pow(power,1.25)); //scaled by 1.06 to account for drag of left motor and by the power level of the battery
 }
 
 /* 
@@ -180,7 +181,7 @@ struct kinematics {
     excecutedTime = micros();
     currentPosition[0] += Offset * (v1 + v2) * cos(currentPosition[2] * PI / 180) * dt / (2 * 1000000);  //function (9) of the kinematics section
     currentPosition[1] += Offset * (v1 + v2) * sin(currentPosition[2] * PI / 180) * dt / (2 * 1000000);
-    currentPosition[2] = getTurnAngleInDegrees();  //zumo angle = the angle read by the gyro (adds a little over time to acount for gyro drift)
+    currentPosition[2] = getTurnAngleInDegrees(); //zumo angle = the angle read by the gyro (adds a little over time to  gyro drift)
   }
 
   //function for turning to a specific angle in relation to the virtual coordinate system
@@ -420,6 +421,7 @@ void setup() {
   proxSensors.initThreeSensors();
   proxSensors.setPulseOffTimeUs(0);
   proxSensors.setPulseOnTimeUs(0);
+  imu.configureForTurnSensing();
 }
 
 //main loop
