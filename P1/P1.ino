@@ -453,6 +453,8 @@ void loop() {
       break;
     case 3:
       stop();
+      display.clear();
+      display.print("Done!")
       break;
   }
 }
