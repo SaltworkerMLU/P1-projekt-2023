@@ -454,7 +454,7 @@ void loop() {
     case 3:
       stop();
       display.clear();
-      display.print("Done!")
+      display.print("Done!");
       break;
   }
 }
