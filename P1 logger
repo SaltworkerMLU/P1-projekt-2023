@@ -346,6 +346,7 @@ void patrol() {
   stop();  //stop when the loop is finished (when the zumo reaches the bounds in the y direction)
   kinematics.forwardKinematics();
   if (kinematics.currentPosition[1] > boundsY) {
+    Serial1.println((String) "tree detected; " + kinematics.currentPosition[0] + "; " + kinematics.currentPosition[1] + "; " + kinematics.currentPosition[2]);
     kinematics.backwardKinematics(7, 6.4, 0);
     state = 3;
   }
@@ -462,6 +463,7 @@ void loop() {
       break;
     case 3:
       stop();
+      Serial1.println((String) "tree detected; " + kinematics.currentPosition[0] + "; " + kinematics.currentPosition[1] + "; " + kinematics.currentPosition[2]);
       display.clear();
       display.print("Done!");
       delay(1000);
