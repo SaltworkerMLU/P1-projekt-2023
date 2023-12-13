@@ -456,7 +456,7 @@ void loop() {
       removeTree();  //the zumo finds the tree and pushes it out of the area
       break;
     case 2:
-      Serial1.println((String) "tree removed: " + kinematics.currentPosition[0] + " " + kinematics.currentPosition[1] + " " + kinematics.currentPosition[2]);
+      Serial1.println((String) "tree removed; " + kinematics.currentPosition[0] + "; " + kinematics.currentPosition[1] + "; " + kinematics.currentPosition[2]);
       kinematics.backwardKinematics(lastPosition[0], lastPosition[1], lastPosition[2]);  //the zumo returns to its position before from before removing the tree, and goes back to patrol loop
       Serial1.println((String) "continue patrol; " + kinematics.currentPosition[0] + "; " + kinematics.currentPosition[1] + "; " + kinematics.currentPosition[2]);
       state = 0;
