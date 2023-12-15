@@ -247,27 +247,10 @@ struct kinematics {
 
   //function for driving zumo to a specific position and angle in the virtual coordinate system
   void backwardKinematics(float x_d, float y_d, float angle_d) {
-    bool run = true;
-    while (run) {
-      forwardKinematics();
-      switch (backwardStage) {
-        case 0:
-          findTargetAngle(x_d, y_d);  //finds the necessary angle for the zumo to be facing the desired point, and turns the zumo to face it
-          backwardStage++;
-          break;
-        case 1:
-          driveStraight(x_d, y_d);  //drives forward until the zumo is at the desired coordinates
-          backwardStage++;
-          break;
-        case 2:
-          turnByAngle(angle_d);  //turns the zumo to the desired angle
-          backwardStage++;
-          break;
-        case 3:
-          backwardStage = 0;
-          run = false;
-      }
-    }
+    forwardKinematics();
+    findTargetAngle(x_d, y_d);  //finds the necessary angle for the zumo to be facing the desired point, and turns the zumo to face it
+    driveStraight(x_d, y_d);  //drives forward until the zumo is at the desired coordinates
+    turnByAngle(angle_d);  //turns the zumo to the desired angle
   }
 } kinematics;
 
@@ -348,13 +331,7 @@ void patrol() {
 
 //function for removing trees from the area
 void removeTree() {
-  bool run;
-
   int orientation = 90;  //target orientation for the zumo before turning to push the tree (could be optimised so that the zumo always pushes the tree the shortest possible distance)
-
-  run = true;
-  while (run) {
-
     long dt;
     //The zumo drives in a curve around the tree, until it reaches the target orientation
     float turnAngle = 1;
@@ -396,8 +373,6 @@ void removeTree() {
     }
     stop();
     state++;  //move on to the next part of the main loop and end the removeTree loop
-    run = false;
-  }
 }
 
 //function for detecting trees and setting turn direction
