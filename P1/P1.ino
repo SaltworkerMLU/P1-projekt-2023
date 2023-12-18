@@ -169,8 +169,6 @@ struct encoderData {
 //struct for anything related to kinematics
 struct kinematics {
   float currentPosition[3] = { 7, 6.4, 0 };  //start position of the zumo
-  int r = 2;                                 //radius of the zumos wheels
-  int s = 85;                                //distance between the belts of the zumo
   long excecutedTime = micros();
   int backwardStage = 0;
 
