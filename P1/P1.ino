@@ -183,7 +183,7 @@ struct kinematics {
   }
 
   //function for turning to a specific angle in relation to the virtual coordinate system
-  void turnByAngle(float angle) {
+  void turnToAngle(float angle) {
     float turnAngle = angle - currentPosition[2];  //calculates difference between desired angle and the zumos current angle
 
     //finds which direction the zumo needs to turn for the shortest turn to desired angle
@@ -222,7 +222,7 @@ struct kinematics {
       teta += 360;
     }
 
-    turnByAngle(teta);  // turns to face desired coordinates
+    turnToAngle(teta);  // turns to face desired coordinates
   }
 
   //function for driving the zumo to desired coordinates
@@ -248,7 +248,7 @@ struct kinematics {
     forwardKinematics();
     findTargetAngle(x_d, y_d);  //finds the necessary angle for the zumo to be facing the desired point, and turns the zumo to face it
     driveStraight(x_d, y_d);    //drives forward until the zumo is at the desired coordinates
-    turnByAngle(angle_d);       //turns the zumo to the desired angle
+    turnToAngle(angle_d);       //turns the zumo to the desired angle
   }
 } kinematics;
 
@@ -277,7 +277,7 @@ void patrol() {
             forward();
             screen(kinematics.currentPosition[0], kinematics.currentPosition[1]);
           } else {
-            kinematics.turnByAngle(90);
+            kinematics.turnToAngle(90);
             pathPart++;
           }
           break;
@@ -288,7 +288,7 @@ void patrol() {
             forward();
             screen(kinematics.currentPosition[0], kinematics.currentPosition[1]);
           } else {
-            kinematics.turnByAngle(180);
+            kinematics.turnToAngle(180);
             pathCount++;  //count how many times the zumo has driven in the y direction, to find the end coordinate of the next part
             pathPart++;
           }
@@ -300,7 +300,7 @@ void patrol() {
             forward();
             screen(kinematics.currentPosition[0], kinematics.currentPosition[1]);
           } else {
-            kinematics.turnByAngle(90);
+            kinematics.turnToAngle(90);
             screen(kinematics.currentPosition[0], kinematics.currentPosition[1]);
             pathPart++;
           }
@@ -311,7 +311,7 @@ void patrol() {
             forward();
             screen(kinematics.currentPosition[0], kinematics.currentPosition[1]);
           } else {
-            kinematics.turnByAngle(0);
+            kinematics.turnToAngle(0);
             pathCount++;
             pathPart = 0;
           }
@@ -354,7 +354,7 @@ void removeTree() {
   //the zumo turns 90 degrees in the turn direction from above, in order to face towards the tree
   stop();
   orientation += 90 * turnDirection;
-  kinematics.turnByAngle(orientation);
+  kinematics.turnToAngle(orientation);
 
   //the zumo drives forwards with the tree until it reaches a boundry line
   kinematics.forwardKinematics();
