@@ -370,7 +370,7 @@ void removeTree() {
 }
 
 //function for detecting trees and setting turn direction
-int treeDetected() {
+bool treeDetected() {
   getProximity();  //reads proximity sensors
 
   //if left proximity sensor is above the threshold turnDirection is 1, and the function is true
